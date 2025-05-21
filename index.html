@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Mantra's API - Weather & Webcams</title>
+<style>
+  html, body { margin:0; padding:0; height: 100%; font-family: Arial, sans-serif; }
+  header {
+    background: #0055aa;
+    color: white;
+    padding: 12px 20px;
+    font-size: 24px;
+    font-weight: bold;
+  }
+  #windy { width: 75%; height: calc(100vh - 48px); float: left; }
+  #webcams {
+    width: 25%;
+    height: calc(100vh - 48px);
+    overflow-y: scroll;
+    background: #f0f0f0;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+  .webcam {
+    margin-bottom: 15px;
+  }
+  .webcam img {
+    width: 100%;
+    border-radius: 6px;
+  }
+  .webcam h4 {
+    margin: 5px 0 2px 0;
+    font-size: 16px;
+  }
+</style>
+</head>
+<body>
+
+<header>Mantra's API</header>
+
+<div id="windy"></div>
+<div id="webcams">
+  <h3>Live Webcams Nearby</h3>
+  <div id="webcams-list">Loading webcams...</div>
+</div>
+
+<script src="https://api.windy.com/assets/map-forecast/libBoot.js"></script>
+<script>
+  const mapForecastKey = 'gcuHvjrl9Jl8zy7w0n86bEMvXie5mBZV'; // Map Forecast API key
+  const webcamsKey = 'IwuKzIxT5WdxPNUpPuHQxljN5FjXDX7e';    // Webcams API key
+
+  const options = {
+    key: mapForecastKey,
+    lat: 40.730610,
+    lon: -73.935242,
+    zoom: 8,
+  };
+
+  windyInit(options, function(windyAPI) {
+    const { map } = windyAPI;
+
+    function loadWebcams(lat, lon) {
+      const radiusKm = 50;
+      const url = `https://api.windy.com/api/webcams/v2/list/nearby=${lat},${lon},${radiusKm}?show=webcams:image,location&key=${webcamsKey}`;
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          const webcamsList = document.getElementById('webcams-list');
+          webcamsList.innerHTML = '';
+          if (data.result.webcams.length === 0) {
+            webcamsList.innerHTML = 'No webcams found nearby.';
+            return;
+          }
+          data.result.webcams.forEach(cam => {
+            const camDiv = document.createElement('div');
+            camDiv.className = 'webcam';
+            camDiv.innerHTML = `
+              <h4>${cam.location.city || cam.location.region || 'Unknown Location'}</h4>
+              <img src="${cam.image.current.preview}" alt="Webcam image" />
+              <small>${cam.location.country}</small>
+            `;
+            webcamsList.appendChild(camDiv);
+          });
+        })
+        .catch(() => {
+          document.getElementById('webcams-list').innerHTML = 'Error loading webcams.';
+        });
+    }
+
+    loadWebcams(options.lat, options.lon);
+
+    map.on('moveend', () => {
+      const center = map.getCenter();
+      loadWebcams(center.lat, center.lng);
+    });
+  });
+</script>
+
+</body>
+</html>
